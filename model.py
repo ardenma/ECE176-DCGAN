@@ -54,13 +54,16 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
         self.conv2 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(128)
+        self.bn2 = nn.BatchNorm2d(128)
         self.conv3 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(256)
+        self.bn3 = nn.BatchNorm2d(256)
         self.conv4 = nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(512)
+        self.bn4 = nn.BatchNorm2d(512)
         self.lrelu = nn.LeakyReLU(0.2)
+        self.flatten = nn.Flatten()
+        self.fc = nn.Linear(512 * 4 * 4, 1)
 
     def forward(self, x):
         x = self.lrelu(self.conv1(x))
@@ -74,6 +77,7 @@ class Discriminator(nn.Module):
         logging.debug(x.size())
         x = self.lrelu(self.conv4(x))
         logging.debug(x.size())
+        x = self.fc(self.flatten(x))
         return x
 
 # TODO: decide on initialization methods
