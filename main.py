@@ -1,4 +1,5 @@
 ''' Main script '''
+import os
 import logging
 
 import torch
@@ -8,11 +9,13 @@ from model import Generator, Discriminator
 from dataloader import get_dataloader
 from optim import get_optim
 
+PATH = os.path.dirname(os.path.realpath(__file__))
+torch.manual_seed(0)  # For reproducibility
 logging.basicConfig(level=logging.DEBUG)
 
-train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
-val_dl = get_dataloader("valid", batch_size=128, shape=(64,64), num_workers=6)
-test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
+# Creating folder for checkpoints
+if not os.path.exists(os.path.join(PATH, "checkpoints")):
+    os.makedirs(os.path.join(PATH, "checkpoints"))
 
 g = Generator()
 d = Discriminator()
@@ -34,11 +37,35 @@ d_optim_options = {
 g_optim = get_optim("Adam", parameters=g.parameters(), options=g_optim_options)
 d_optim = get_optim("Adam", parameters=d.parameters(), options=d_optim_options)
 
+# TODO: add argparse and load checkpoint if we need it...
+#if load_checkpoint == True:
+#    g_checkpoint = torch.load(g_checkpoint_path)
+#    d_checkpoint = torch.load(d_checkpoint_path)
+#    g.load_state_dict(g_checkpoint['model_state_dict'])
+#    d.load_state_dict(d_checkpoint['model_state_dict'])
+#    g_optim.load_state_dict(g_checkpoint['optimizer_state_dict'])
+#    d_optim.load_state_dict(d_checkpoint['optimizer_state_dict'])
+#    epoch = g_checkpoint['epoch']
+#    model.eval()
+#     - or -
+#    model.train()
+
+train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
+val_dl = get_dataloader("valid", batch_size=128, shape=(64,64), num_workers=6)
+test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
+
+
+version = 1       # for checkpointing
 num_epochs = 100
-k = 1  # number of steps to apply the discriminator, from paper
+k = 1             # number of steps to apply the discriminator, from paper
+hparams = {
+    "version": version,
+    "num_epochs": num_epochs,
+    "k": k
+}
 
 # Using adversarial training example from https://arxiv.org/pdf/1511.06434.pdf
-for epoch in range(num_epochs):
+for epoch in range(1, num_epochs+1):
     print(f"\nBeginning Epoch {epoch}/{num_epochs}.\n")
     for batch in tqdm(train_dl):
         # Discriminator Training Loop
@@ -55,8 +82,8 @@ for epoch in range(num_epochs):
             # Computing loss for discriminator and optimizing wrt generator
             loss_data = torch.log(d(x))
             loss_g = torch.log(1 - d(x_generated))
-            loss_total = -torch.sum(torch.cat((loss_data, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
-            loss_total.backward()
+            loss_d = -torch.sum(torch.cat((loss_data, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
+            loss_d.backward()
             d_optim.step()
 
         # Generator Training
@@ -70,6 +97,23 @@ for epoch in range(num_epochs):
         loss_g.backward()
         g_optim.step()
 
+    # Checkpointing after every 10 epochs
+    if epoch % 10 == 0:
+        logging.debug(f"Checkpointing models at epoch {epoch}.")
+        torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': g.state_dict(),
+                    'optimizer_state_dict': g_optim.state_dict(),
+                    'loss': loss_g,
+                    'hparams': hparams,
+                    }, os.path.join(PATH, f"checkpoints/g_epoch_{epoch}_ver_{version}.pt"))
+        torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': d.state_dict(),
+                    'optimizer_state_dict': d_optim.state_dict(),
+                    'loss': loss_d,
+                    'hparams': hparams,
+                    }, os.path.join(PATH, f"checkpoints/d_epoch_{epoch}_ver_{version}.pt"))
 
 # Testing generator output
 #x = torch.rand(100)
@@ -77,3 +121,4 @@ for epoch in range(num_epochs):
 #d = Discriminator()
 #y = g(x)
 #print(d(y).shape)
+

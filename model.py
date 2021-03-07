@@ -12,9 +12,10 @@ class DCGAN(nn.Module):
         self.lr = learning_rate
         self.g = Generator()
         self.d = Discriminator()
+        self.apply(weights_init)
 
     def forward(self, x):
-        pass
+        return self.g(x)
 
 
 class Generator(nn.Module):
