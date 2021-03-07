@@ -24,12 +24,16 @@ class Generator(nn.Module):
         self.dense1 = nn.Linear(100, 16384)
         self.bn1 = nn.BatchNorm2d(1024)
         self.conv1 = nn.ConvTranspose2d(1024, 512, kernel_size=4, stride=2, padding=1, bias=False)
+
         self.bn2 = nn.BatchNorm2d(512)
         self.conv2 = nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False)
+
         self.bn3 = nn.BatchNorm2d(256)
         self.conv3 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False)
+
         self.bn4 = nn.BatchNorm2d(128)
         self.conv4 = nn.ConvTranspose2d(128, 3, kernel_size=4, stride=2, padding=1, bias=False)
+
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.apply(weights_init)
@@ -53,49 +57,59 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pool1 = nn.MaxPool2d(kernel_size=2)
         self.bn1 = nn.BatchNorm2d(64)
         self.dropout1 = nn.Dropout2d()
+
         self.conv2 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False)
+        self.pool2 = nn.MaxPool2d(kernel_size=2)
         self.bn2 = nn.BatchNorm2d(128)
         self.dropout2 = nn.Dropout2d()
+
         self.conv3 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(256)
         self.dropout3 = nn.Dropout2d()
+
         self.conv4 = nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False)
         self.bn4 = nn.BatchNorm2d(512)
         self.dropout4 = nn.Dropout2d()
+
         self.lrelu = nn.LeakyReLU(0.2)
         self.flatten = nn.Flatten()
+        self.dropout = nn.Dropout()
         self.fc = nn.Linear(512 * 4 * 4, 2)  # one-hot encoded
+        self.fc_small = nn.Linear(128 * 4 * 4, 2)  # one-hot encoded
         self.softmax = nn.Softmax(dim=-1)
         self.epsilon = 1e-6                  # prevent infinity in log by making sure output is not 0 or 1
         self.apply(weights_init)
 
     def forward(self, x):
         x = self.lrelu(self.conv1(x))
+        #x = self.pool1(x)
         x = self.bn1(x)
         x = self.dropout1(x)
-        #logging.debug(x.size())
+
         x = self.lrelu(self.conv2(x))
+        #x = self.pool2(x)
         x = self.bn2(x)
         x = self.dropout2(x)
-        #logging.debug(x.size())
+
+        #x = self.fc_small(self.flatten(x))
+
         x = self.lrelu(self.conv3(x))
         x = self.bn3(x)
         x = self.dropout3(x)
-        #logging.debug(x.size())
+
         x = self.lrelu(self.conv4(x))
         x = self.dropout4(x)
-        #logging.debug(x.size())
-        x = self.fc(self.flatten(x))
+
+        x = self.fc(self.dropout(self.flatten(x)))
         x = self.softmax(x)
         x = x[...,-1]
         x = torch.clamp(x, min=self.epsilon, max=1-self.epsilon)
         return x
 
-# TODO: decide on initialization methods
 # DCGAN paper initializes using zero-centered Gaussian distribution, with standard deviation of 0.2
-
 def weights_init(m):
     if hasattr(m, "weight"):
         logging.debug(f"Initializing weight for {m} weights")
