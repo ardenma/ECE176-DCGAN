@@ -2,10 +2,6 @@
 import torch
 import torch.nn as nn
 import logging
-# log = logging.getLogger()
-# log.setLevel("DEBUG")
-logging.basicConfig(level=logging.DEBUG)
-
 
 class DCGAN(nn.Module):
     def __init__(self, learning_rate, epochs):
@@ -14,7 +10,8 @@ class DCGAN(nn.Module):
         self.image_dim = 64
         self.channels = 3
         self.lr = learning_rate
-        self.n_epochs = epochs
+        self.g = Generator()
+        self.d = Discriminator()
 
     def forward(self, x):
         pass
