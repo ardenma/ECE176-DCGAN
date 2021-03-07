@@ -1,4 +1,5 @@
 **/env
 **/__pycache__
+**/celeba
 .DS_Store
 .ipynb_checkpoints

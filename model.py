@@ -31,6 +31,7 @@ class Generator(nn.Module):
         self.conv4 = nn.ConvTranspose2d(128, 3, kernel_size=4, stride=2, padding=1, bias=False)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
+        self.apply(weights_init)
 
     def forward(self, x):
         x = self.relu(self.dense1(x))
@@ -61,28 +62,44 @@ class Discriminator(nn.Module):
         self.lrelu = nn.LeakyReLU(0.2)
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(512 * 4 * 4, 1)
+        self.apply(weights_init)
 
     def forward(self, x):
         x = self.lrelu(self.conv1(x))
         x = self.bn1(x)
-        logging.debug(x.size())
+        #logging.debug(x.size())
         x = self.lrelu(self.conv2(x))
         x = self.bn2(x)
-        logging.debug(x.size())
+        #logging.debug(x.size())
         x = self.lrelu(self.conv3(x))
         x = self.bn3(x)
-        logging.debug(x.size())
+        #logging.debug(x.size())
         x = self.lrelu(self.conv4(x))
-        logging.debug(x.size())
+        #logging.debug(x.size())
         x = self.fc(self.flatten(x))
         return x
 
 # TODO: decide on initialization methods
+# DCGAN paper initializes using zero-centered Gaussian distribution, with standard deviation of 0.2
+
 def weights_init(m):
+    if hasattr(m, "weight"):
+        logging.debug(f"Initializing weight for {m} weights")
+        nn.init.normal_(m.weight, mean=0.0, std=0.2)
+    if hasattr(m, "bias"):
+        if m.bias is not None:
+            logging.debug(f"Initializing weight for {m} bias")
+            nn.init.normal_(m.bias, mean=0.0, std=0.2)
+
+def weights_init_old(m):
     if isinstance(m.layer, nn.ConvTranspose2d):
-        nn.init.normal_(m.weight)
+        nn.init.normal_(m.weight, mean=0.0, std=0.2)
     if isinstance(m.layer, nn.Conv2d):
-        nn.init.normal_(m.weight)
+        nn.init.normal_(m.weight, mean=0.0, std=0.2)
     if isinstance(m.layer, nn.BatchNorm2d):
-        nn.init.normal_(m.weight)
-        nn.init.zeros_(m.bias)
+        nn.init.normal_(m.weight, mean=0.0, std=0.2)
+        nn.init.normal_(m.bias, mean=0.0, std=0.2)
+        #nn.init.zeros_(m.bias)
+    if isinstance(m.layer, nn.Linear):
+        nn.init.normal_(m.weight, mean=0.0, std=0.2)
+        nn.init.zeros_(m.bias, mean=0.0, std=0.2)
