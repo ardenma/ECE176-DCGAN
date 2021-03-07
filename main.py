@@ -65,7 +65,7 @@ train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
 
 version = 1       # for checkpointing
 num_epochs = 100
-k = 1             # number of steps to apply the discriminator, from paper
+k = 2             # number of steps to apply the discriminator, from paper
 hparams = {
     "version": version,
     "num_epochs": num_epochs,
@@ -92,10 +92,11 @@ for epoch in range(1, num_epochs+1):
             x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
 
             # Computing loss for discriminator and optimizing wrt generator
-            loss_totalata = torch.log(d(x))
+            loss_total = torch.log(d(x))
             loss_g = torch.log(1 - d(x_generated))
-            loss_total = -torch.sum(torch.cat((loss_totalata, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
-            loss_total.backward()
+            loss_total = torch.sum(torch.cat((loss_total, loss_g))) / batch_size  
+            loss_total_neg = -loss_total  # negative sign for gradient ascent instead of descent
+            loss_total_neg.backward()
             d_optim.step()
             logging.debug(f"Loss: {loss_total.item()}")
 
@@ -105,7 +106,7 @@ for epoch in range(1, num_epochs+1):
         x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
 
         # Computing loss for generator and optimizing wrt generator
-        loss_totalata = torch.log(d(x))
+        loss_g = torch.log(d(x))
         loss_g = torch.sum(torch.log(1 - d(x_generated))) / batch_size
         loss_g.backward()
         g_optim.step()
