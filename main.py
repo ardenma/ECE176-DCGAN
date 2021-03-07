@@ -11,9 +11,11 @@ from model import Generator, Discriminator
 from dataloader import get_dataloader
 from optim import get_optim
 
+#logging.basicConfig(level=logging.DEBUG)
 PATH = os.path.dirname(os.path.realpath(__file__))
 torch.manual_seed(0)  # For reproducibility
-#logging.basicConfig(level=logging.DEBUG)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+logging.info(f"Using device: {device}")
 
 # Creating folder for logs and checkpoints
 if not os.path.exists(os.path.join(PATH, "logs")):
@@ -23,6 +25,8 @@ if not os.path.exists(os.path.join(PATH, "checkpoints")):
 
 g = Generator()
 d = Discriminator()
+g.to(device=device)
+d.to(device=device)
 
 g_optim_options = {
     "lr": 0.0002, 
@@ -83,35 +87,36 @@ for epoch in range(1, num_epochs+1):
 
             # x is batch size x 3 x 218 x 178 by default, 64 x 64 at the end after resize
             # y is batch size x 40
-            x, y = batch
+            x = batch[0].to(device)
             batch_size = x.shape[0]
-            x_generated = g(torch.rand((batch_size, 100)))  # Generating samples
+            x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
 
             # Computing loss for discriminator and optimizing wrt generator
-            loss_data = torch.log(d(x))
+            loss_totalata = torch.log(d(x))
             loss_g = torch.log(1 - d(x_generated))
-            loss_d = -torch.sum(torch.cat((loss_data, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
-            loss_d.backward()
+            loss_total = -torch.sum(torch.cat((loss_totalata, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
+            loss_total.backward()
             d_optim.step()
-            logging.debug(f"Loss_d: {loss_d.item()}")
+            logging.debug(f"Loss: {loss_total.item()}")
 
         # Generator Training
         logging.debug("Training generator.")
         g_optim.zero_grad()
-        x_generated = g(torch.rand((batch_size, 100)))  # Generating samples
+        x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
 
         # Computing loss for generator and optimizing wrt generator
-        loss_data = torch.log(d(x))
+        loss_totalata = torch.log(d(x))
         loss_g = torch.sum(torch.log(1 - d(x_generated))) / batch_size
         loss_g.backward()
         g_optim.step()
         logging.debug(f"Loss_g: {loss_g.item()}")
 
-        t.set_postfix({"loss_g": loss_g.item(), "loss_d": loss_d.item()})
+        #t.set_postfix({"loss_g": loss_g.item(), "loss_total": loss_total.item()})
+        t.set_postfix({"loss": loss_total.item()})
     
     # Logging losses
-    writer.add_scalar("loss_g", loss_g.item(), epoch)
-    writer.add_scalar("loss_d", loss_d.item(), epoch)
+    #writer.add_scalar("loss", loss_g.item(), epoch)
+    writer.add_scalar("loss_total", loss_total.item(), epoch)
 
     # Checkpointing after every 10 epochs
     if epoch % 10 == 0:
@@ -120,14 +125,14 @@ for epoch in range(1, num_epochs+1):
                     'epoch': epoch,
                     'model_state_dict': g.state_dict(),
                     'optimizer_state_dict': g_optim.state_dict(),
-                    'loss': loss_g,
+                    'loss': loss_total,
                     'hparams': hparams,
                     }, os.path.join(PATH, f"checkpoints/g_epoch_{epoch}_ver_{version}.pt"))
         torch.save({
                     'epoch': epoch,
                     'model_state_dict': d.state_dict(),
                     'optimizer_state_dict': d_optim.state_dict(),
-                    'loss': loss_d,
+                    'loss': loss_total,
                     'hparams': hparams,
                     }, os.path.join(PATH, f"checkpoints/d_epoch_{epoch}_ver_{version}.pt"))
 

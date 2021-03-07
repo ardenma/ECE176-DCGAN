@@ -12,5 +12,6 @@ def get_dataloader(split, batch_size, shape, num_workers):
     data_loader = torch.utils.data.DataLoader(celeba_data,
                                             batch_size=batch_size,
                                             shuffle=True,
-                                            num_workers=num_workers)
+                                            num_workers=num_workers,
+                                            pin_memory=torch.cuda.is_available())
     return data_loader
