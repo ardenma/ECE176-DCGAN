@@ -62,7 +62,9 @@ class Discriminator(nn.Module):
         self.bn4 = nn.BatchNorm2d(512)
         self.lrelu = nn.LeakyReLU(0.2)
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(512 * 4 * 4, 1)
+        self.fc = nn.Linear(512 * 4 * 4, 2)  # one-hot encoded
+        self.softmax = nn.Softmax(dim=-1)
+        self.epsilon = 1e-6                  # prevent infinity in log by making sure output is not 0 or 1
         self.apply(weights_init)
 
     def forward(self, x):
@@ -78,6 +80,9 @@ class Discriminator(nn.Module):
         x = self.lrelu(self.conv4(x))
         #logging.debug(x.size())
         x = self.fc(self.flatten(x))
+        x = self.softmax(x)
+        x = x[...,-1]
+        x = torch.clamp(x, min=self.epsilon, max=1-self.epsilon)
         return x
 
 # TODO: decide on initialization methods
