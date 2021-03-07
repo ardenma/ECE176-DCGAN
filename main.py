@@ -1,8 +1,10 @@
 ''' Main script '''
 import os
 import logging
+from datetime import datetime
 
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from model import Generator, Discriminator
@@ -11,9 +13,11 @@ from optim import get_optim
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 torch.manual_seed(0)  # For reproducibility
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
-# Creating folder for checkpoints
+# Creating folder for logs and checkpoints
+if not os.path.exists(os.path.join(PATH, "logs")):
+    os.makedirs(os.path.join(PATH, "logs"))
 if not os.path.exists(os.path.join(PATH, "checkpoints")):
     os.makedirs(os.path.join(PATH, "checkpoints"))
 
@@ -51,8 +55,8 @@ d_optim = get_optim("Adam", parameters=d.parameters(), options=d_optim_options)
 #    model.train()
 
 train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
-val_dl = get_dataloader("valid", batch_size=128, shape=(64,64), num_workers=6)
-test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
+#val_dl = get_dataloader("valid", batch_size=128, shape=(64,64), num_workers=6)
+#test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
 
 
 version = 1       # for checkpointing
@@ -64,10 +68,14 @@ hparams = {
     "k": k
 }
 
+LOG_DIR = f'version_{version}' + datetime.now().strftime('_%H_%M_%d_%m_%Y')
+writer = SummaryWriter(log_dir=os.path.join(PATH, "logs", LOG_DIR))
+
 # Using adversarial training example from https://arxiv.org/pdf/1511.06434.pdf
 for epoch in range(1, num_epochs+1):
-    print(f"\nBeginning Epoch {epoch}/{num_epochs}.\n")
-    for batch in tqdm(train_dl):
+    print(f"\nBeginning Epoch {epoch}/{num_epochs}.")
+    t = tqdm(train_dl)
+    for batch in t:
         # Discriminator Training Loop
         logging.debug("Training discriminator.")
         for _ in range(k):
@@ -85,6 +93,7 @@ for epoch in range(1, num_epochs+1):
             loss_d = -torch.sum(torch.cat((loss_data, loss_g))) / batch_size  # negative sign for gradient ascent instead of descent
             loss_d.backward()
             d_optim.step()
+            logging.debug(f"Loss_d: {loss_d.item()}")
 
         # Generator Training
         logging.debug("Training generator.")
@@ -96,6 +105,13 @@ for epoch in range(1, num_epochs+1):
         loss_g = torch.sum(torch.log(1 - d(x_generated))) / batch_size
         loss_g.backward()
         g_optim.step()
+        logging.debug(f"Loss_g: {loss_g.item()}")
+
+        t.set_postfix({"loss_g": loss_g.item(), "loss_d": loss_d.item()})
+    
+    # Logging losses
+    writer.add_scalar("loss_g", loss_g.item(), epoch)
+    writer.add_scalar("loss_d", loss_d.item(), epoch)
 
     # Checkpointing after every 10 epochs
     if epoch % 10 == 0:

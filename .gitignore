@@ -1,5 +1,7 @@
 **/env
 **/__pycache__
 **/celeba
+**/logs
+**/checkpoints
 .DS_Store
 .ipynb_checkpoints
