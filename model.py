@@ -19,7 +19,7 @@ class DCGAN(nn.Module):
 
 
 class Generator(nn.Module):
-    '''
+    
     def __init__(self):
         super(Generator, self).__init__()
         self.dense1 = nn.Linear(100, 16384)
@@ -82,10 +82,10 @@ class Generator(nn.Module):
         x = self.bn4(x)
         x = self.tanh(self.conv5(x))
         return x
-
+    '''
 
 class Discriminator(nn.Module):
-    '''
+    
     def __init__(self):
         super(Discriminator, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False)
@@ -158,7 +158,7 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         x = self.lrelu(self.conv1(x))
-        x = self.bn1(x)
+#         x = self.bn1(x)
         x = self.lrelu(self.conv2(x))
         x = self.bn2(x)
         x = self.lrelu(self.conv3(x))
@@ -167,9 +167,10 @@ class Discriminator(nn.Module):
         x = self.bn4(x)
         x = self.sigmoid(self.conv5(x))
         return x
+    '''
 
 # DCGAN paper initializes using zero-centered Gaussian distribution, with standard deviation of 0.2
-'''
+
 def weights_init(m):
     if hasattr(m, "weight"):
         logging.debug(f"Initializing weight for {m} weights")
@@ -186,3 +187,4 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+'''

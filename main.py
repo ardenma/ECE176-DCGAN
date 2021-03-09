@@ -7,6 +7,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from plot import plot_loss, plot_img
 from model import Generator, Discriminator
 from dataloader import get_dataloader
 from optim import get_optim
@@ -32,14 +33,16 @@ g_optim_options = {
     "lr": 0.0002, 
     "eps": 1e-08,
     "weight_decay": 0, 
-    "amsgrad": False
+    "amsgrad": False,
+    "betas": (0.5, 0.999)
 }
 
 d_optim_options = {
     "lr": 0.0002,
     "eps": 1e-08,
     "weight_decay": 0, 
-    "amsgrad": False
+    "amsgrad": False,
+    "betas": (0.5, 0.9999)
 }
 
 g_optim = get_optim("Adam", parameters=g.parameters(), options=g_optim_options)
@@ -64,32 +67,36 @@ train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
 
 
 version = 1       # for checkpointing
-num_epochs = 100
-k = 2             # number of steps to apply the discriminator, from paper
+num_epochs = 1
+K = 1             # number of steps to apply the discriminator, from paper
 hparams = {
     "version": version,
     "num_epochs": num_epochs,
-    "k": k
+    "k": K
 }
 
 LOG_DIR = f'version_{version}' + datetime.now().strftime('_%H_%M_%d_%m_%Y')
 writer = SummaryWriter(log_dir=os.path.join(PATH, "logs", LOG_DIR))
 
+
+# Store training losses
+g_losses = []
+d_losses = []
 # Using adversarial training example from https://arxiv.org/pdf/1511.06434.pdf
 for epoch in range(1, num_epochs+1):
     print(f"\nBeginning Epoch {epoch}/{num_epochs}.")
     t = tqdm(train_dl)
     for batch in t:
-        # Discriminator Training Loop
+        #========== Discriminator Training Loop ==========#
         logging.debug("Training discriminator.")
-        for _ in range(k):
+        for k in range(K):
             d_optim.zero_grad()
 
             # x is batch size x 3 x 218 x 178 by default, 64 x 64 at the end after resize
             # y is batch size x 40
             x = batch[0].to(device)
             batch_size = x.shape[0]
-            x_generated = g(torch.rand((batch_size, 100, 1, 1), device=device)) #Generating samples, shape changed from (128, 100)
+            x_generated = g(torch.rand((batch_size, 100), device=device)) #Generating samples, shape changed from (128, 100)
 
             # Computing loss for discriminator and optimizing wrt generator
             loss_total = torch.log(d(x))
@@ -98,15 +105,17 @@ for epoch in range(1, num_epochs+1):
             loss_total_neg = -loss_total  # negative sign for gradient ascent instead of descent
             loss_total_neg.backward()
             d_optim.step()
-            logging.debug(f"Loss: {loss_total.item()}")
+            logging.debug(f"Loss_d_{k}: {loss_total.item()}")
+        #=================================================#
 
-        # Generator Training
+        
+        #========== Generator Training ==========#
         logging.debug("Training generator.")
         g_optim.zero_grad()
-        x_generated = g(torch.rand((batch_size, 100, 1, 1), device=device))  # Generating samples, shape changed from (128, 100)
+        x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples, shape changed from (128, 100)
 
         # Computing loss for generator and optimizing wrt generator
-        loss_g = torch.log(d(x))
+#         loss_g = torch.log(d(x))
         loss_g = torch.sum(torch.log(1 - d(x_generated))) / batch_size
         loss_g.backward()
         g_optim.step()
@@ -114,6 +123,11 @@ for epoch in range(1, num_epochs+1):
 
         #t.set_postfix({"loss_g": loss_g.item(), "loss_total": loss_total.item()})
         t.set_postfix({"loss": loss_total.item()})
+        #========================================#
+        
+        # store losses
+        g_losses.append(loss_total.item())
+        d_losses.append(loss_g.item())
     
     # Logging losses
     #writer.add_scalar("loss", loss_g.item(), epoch)
@@ -137,6 +151,8 @@ for epoch in range(1, num_epochs+1):
                     'hparams': hparams,
                     }, os.path.join(PATH, f"checkpoints/d_epoch_{epoch}_ver_{version}.pt"))
 
+plot_loss(g_losses, d_losses, f'Generator and Discriminator Training Loss Version {version}', f'train_loss_ver_{version}.png')
+        
 # Testing generator output
 #x = torch.rand(100)
 #g = Generator()
