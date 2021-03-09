@@ -11,7 +11,7 @@ from model import Generator, Discriminator
 from dataloader import get_dataloader
 from optim import get_optim
 
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 PATH = os.path.dirname(os.path.realpath(__file__))
 torch.manual_seed(0)  # For reproducibility
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -89,7 +89,7 @@ for epoch in range(1, num_epochs+1):
             # y is batch size x 40
             x = batch[0].to(device)
             batch_size = x.shape[0]
-            x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
+            x_generated = g(torch.rand((batch_size, 100, 1, 1), device=device)) #Generating samples, shape changed from (128, 100)
 
             # Computing loss for discriminator and optimizing wrt generator
             loss_total = torch.log(d(x))
@@ -103,7 +103,7 @@ for epoch in range(1, num_epochs+1):
         # Generator Training
         logging.debug("Training generator.")
         g_optim.zero_grad()
-        x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples
+        x_generated = g(torch.rand((batch_size, 100, 1, 1), device=device))  # Generating samples, shape changed from (128, 100)
 
         # Computing loss for generator and optimizing wrt generator
         loss_g = torch.log(d(x))
