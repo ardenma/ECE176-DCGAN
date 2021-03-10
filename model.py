@@ -52,21 +52,21 @@ class Generator(nn.Module):
         x = self.tanh(self.conv4(x))
         return x
     '''
-    def __init__(self):
+    def __init__(self, depth=128):
         super(Generator, self).__init__()
-        self.conv1 = nn.ConvTranspose2d(100, 512, kernel_size=4, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm2d(512)
+        self.conv1 = nn.ConvTranspose2d(100, depth*8, kernel_size=4, stride=1, padding=0, bias=False)
+        self.bn1 = nn.BatchNorm2d(depth*8)
         
-        self.conv2 = nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(256)
+        self.conv2 = nn.ConvTranspose2d(depth*8, depth*4, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(depth*4)
 
-        self.conv3 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(128)
+        self.conv3 = nn.ConvTranspose2d(depth*4, depth*2, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(depth*2)
 
-        self.conv4 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn4 = nn.BatchNorm2d(64)
+        self.conv4 = nn.ConvTranspose2d(depth*2, depth, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn4 = nn.BatchNorm2d(depth)
         
-        self.conv5 = nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False)
+        self.conv5 = nn.ConvTranspose2d(depth, 3, kernel_size=4, stride=2, padding=1, bias=False)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
 
@@ -136,21 +136,21 @@ class Discriminator(nn.Module):
         x = torch.clamp(x, min=self.epsilon, max=1-self.epsilon)
         return x
     '''
-    def __init__(self):
+    def __init__(self, depth=128):
         super(Discriminator, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.conv1 = nn.Conv2d(3, depth, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(depth)
 
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(128)
+        self.conv2 = nn.Conv2d(depth, depth*2, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(depth*2)
 
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(256)
+        self.conv3 = nn.Conv2d(depth*2, depth*4, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(depth*4)
 
-        self.conv4 = nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False)
-        self.bn4 = nn.BatchNorm2d(512)
+        self.conv4 = nn.Conv2d(depth*4, depth*8, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn4 = nn.BatchNorm2d(depth*8)
         
-        self.conv5 = nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=0, bias=False)
+        self.conv5 = nn.Conv2d(depth*8, 1, kernel_size=4, stride=1, padding=0, bias=False)
         self.lrelu = nn.LeakyReLU(0.2)
         self.sigmoid = nn.Sigmoid()
 
@@ -162,7 +162,8 @@ class Discriminator(nn.Module):
         x = self.bn3(x)
         x = self.lrelu(self.conv4(x))
         x = self.bn4(x)
-        x = self.sigmoid(self.conv5(x))
+#         x = self.sigmoid(self.conv5(x))
+        x = self.conv5(x)
         return x
 
 # DCGAN paper initializes using zero-centered Gaussian distribution, with standard deviation of 0.2

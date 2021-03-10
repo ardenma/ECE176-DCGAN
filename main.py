@@ -32,7 +32,7 @@ g.apply(weights_init)
 d.apply(weights_init)
 
 # Initialize BCELoss function
-criterion = nn.BCELoss()
+criterion = nn.BCEWithLogitsLoss()
 
 # Create batch of latent vectors that we will use to visualize the progression of the generator
 fixed_noise = torch.randn(64, 100, 1, 1, device=device)
@@ -90,9 +90,9 @@ train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
 #test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
 
 
-version = 3       # for checkpointing
-num_epochs = 20
-K = 1             # number of steps to apply the discriminator, from paper
+version = 8       # for checkpointing
+num_epochs = 5
+K = 2             # number of steps to apply the discriminator, from paper
 hparams = {
     "version": version,
     "num_epochs": num_epochs,
@@ -202,7 +202,6 @@ for epoch in range(1, num_epochs+1):
         g_losses.append(loss_g.item())
         d_losses.append(loss_total.item())
     
-    # Logging losses
     #writer.add_scalar("loss", loss_g.item(), epoch)
     writer.add_scalar("loss_total", loss_total.item(), epoch)
 
