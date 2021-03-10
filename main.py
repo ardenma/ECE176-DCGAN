@@ -90,8 +90,8 @@ train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
 #test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
 
 
-version = 1       # for checkpointing
-num_epochs = 5
+version = 3       # for checkpointing
+num_epochs = 20
 K = 1             # number of steps to apply the discriminator, from paper
 hparams = {
     "version": version,
@@ -207,7 +207,7 @@ for epoch in range(1, num_epochs+1):
     writer.add_scalar("loss_total", loss_total.item(), epoch)
 
     # Checkpointing after every 10 epochs
-    if epoch % 10 == 0:
+    if epoch % 5 == 0:
         logging.debug(f"Checkpointing models at epoch {epoch}.")
         torch.save({
                     'epoch': epoch,
