@@ -9,7 +9,7 @@ def get_dataloader(split, batch_size, shape, num_workers):
     logging.info(f"Getting {split} dataloader.")
     
     # download the data set and apply transformation with cropping and normalization
-    '''
+    
     transform = transforms.Compose([transforms.Resize(shape),
                                     transforms.CenterCrop(shape),
                                     transforms.ToTensor(),
@@ -17,7 +17,7 @@ def get_dataloader(split, batch_size, shape, num_workers):
     '''
     transform = transforms.Compose([transforms.Resize(shape),
                                     transforms.ToTensor()])
-    
+    '''
     celeba_data = dset.CelebA('.', split=split, transform=transform, download=True)
     data_loader = torch.utils.data.DataLoader(celeba_data,
                                               batch_size=batch_size,
