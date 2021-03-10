@@ -1,8 +1,6 @@
 **/env
 **/__pycache__
 **/celeba
-**/archive
-**/figures
 **/logs
 **/checkpoints
 .DS_Store
