@@ -162,7 +162,6 @@ class Discriminator(nn.Module):
         x = self.bn3(x)
         x = self.lrelu(self.conv4(x))
         x = self.bn4(x)
-#         x = self.sigmoid(self.conv5(x))
         x = self.conv5(x)
         return x
 

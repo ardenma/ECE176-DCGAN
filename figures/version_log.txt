@@ -6,3 +6,5 @@ version 5: epoch = 40, k = 1, depth = 64
 version 6: epoch = 5, k = 1, depth = 128
 version 7: epoch = 5, k = 1, depth = 128, remove Discriminator Sigmoid Activation, Use BCEWithLogitsLoss
 version 8: epoch = 5, k = 2, depth = 128, remove Discriminator Sigmoid Activation, Use BCEWithLogitsLoss
+version 9: epoch = 2, k = 1, depth = 64, remove Discriminator Sigmoid Activation, Use BCEWithLogitsLoss
+version 10: epoch = 20, k = 1, depth = 128, remove Discriminator Sigmoid Activation, Use BCEWithLogitsLoss

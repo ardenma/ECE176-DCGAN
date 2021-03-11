@@ -5,10 +5,11 @@ from datetime import datetime
 
 import torch
 import torch.nn as nn
+import torchvision.utils as vutils
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from plot import plot_loss, plot_img
+import plot
 from model import Generator, Discriminator, weights_init
 from dataloader import get_dataloader
 from optim import get_optim
@@ -26,8 +27,12 @@ if not os.path.exists(os.path.join(PATH, "checkpoints")):
     os.makedirs(os.path.join(PATH, "checkpoints"))
     
 # Initialize Generator and Discriminator
-g = Generator().to(device=device)
-d = Discriminator().to(device=device)
+'''
+g = Generator(64).to(device=device)       # Set generator depth to 64
+d = Discriminator(64).to(device=device)   # Set discriminator depth to 64
+'''
+g = Generator().to(device=device)         # Default generator depth is 128
+d = Discriminator().to(device=device)     # Default discriminator depth is 128
 g.apply(weights_init)
 d.apply(weights_init)
 
@@ -90,9 +95,9 @@ train_dl = get_dataloader("train", batch_size=128, shape=(64,64), num_workers=6)
 #test_dl = get_dataloader("test", batch_size=128, shape=(64,64), num_workers=6)
 
 
-version = 8       # for checkpointing
-num_epochs = 5
-K = 2             # number of steps to apply the discriminator, from paper
+version = 10       # for checkpointing
+num_epochs = 20
+K = 1             # number of steps to apply the discriminator, from paper
 hparams = {
     "version": version,
     "num_epochs": num_epochs,
@@ -102,10 +107,13 @@ hparams = {
 LOG_DIR = f'version_{version}' + datetime.now().strftime('_%H_%M_%d_%m_%Y')
 writer = SummaryWriter(log_dir=os.path.join(PATH, "logs", LOG_DIR))
 
-
 # Store training losses
 g_losses = []
 d_losses = []
+
+# Store generated images
+img_list = []
+
 # Using adversarial training example from https://arxiv.org/pdf/1511.06434.pdf
 for epoch in range(1, num_epochs+1):
     print(f"\nBeginning Epoch {epoch}/{num_epochs}.")
@@ -131,36 +139,26 @@ for epoch in range(1, num_epochs+1):
             loss_total_neg.backward()
             d_optim.step()
             '''
-            ## Train with all-real batch
+            # Real batch
             d.zero_grad()
-            # Format batch
             x = batch[0].to(device)
             batch_size = x.size(0)
             label = torch.full((batch_size,), real_label, dtype=torch.float, device=device)
-            # Forward pass real batch through D
             output = d(x).view(-1)
-            # Calculate loss on all-real batch
             loss_real = criterion(output, label)
-            # Calculate gradients for D in backward pass
             loss_real.backward()
             D_x = output.mean().item()
 
-            ## Train with all-fake batch
-            # Generate batch of latent vectors
+            # Fake batch
             noise = torch.randn(batch_size, 100, 1, 1, device=device)
-            # Generate fake image batch with G
             fake = g(noise)
             label.fill_(fake_label)
-            # Classify all fake batch with D
             output = d(fake.detach()).view(-1)
-            # Calculate D's loss on the all-fake batch
             loss_fake = criterion(output, label)
-            # Calculate the gradients for this batch
             loss_fake.backward()
             D_G_z1 = output.mean().item()
-            # Add the gradients from the all-real and all-fake batches
+            
             loss_total = loss_real + loss_fake
-            # Update D
             d_optim.step()
             
             logging.debug(f"Loss_d_{k}: {loss_total.item()}")
@@ -205,26 +203,30 @@ for epoch in range(1, num_epochs+1):
     #writer.add_scalar("loss", loss_g.item(), epoch)
     writer.add_scalar("loss_total", loss_total.item(), epoch)
 
-    # Checkpointing after every 10 epochs
-    if epoch % 5 == 0:
-        logging.debug(f"Checkpointing models at epoch {epoch}.")
-        torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': g.state_dict(),
-                    'optimizer_state_dict': g_optim.state_dict(),
-                    'loss': loss_total,
-                    'hparams': hparams,
-                    }, os.path.join(PATH, f"checkpoints/g_epoch_{epoch}_ver_{version}.pt"))
-        torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': d.state_dict(),
-                    'optimizer_state_dict': d_optim.state_dict(),
-                    'loss': loss_total,
-                    'hparams': hparams,
-                    }, os.path.join(PATH, f"checkpoints/d_epoch_{epoch}_ver_{version}.pt"))
+    # Saving generated images after every epoch
+    with torch.no_grad():
+        fake = g(torch.randn(64, 100, 1, 1, device=device)).detach().cpu()
+    img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
 
-plot_loss(g_losses, d_losses, f'Generator and Discriminator Training Loss Version {version}', f'train_loss_ver_{version}.png')
-        
+    # Checkpointing after every epoch
+    logging.debug(f"Checkpointing models at epoch {epoch}.")
+    torch.save({
+                'epoch': epoch,
+                'model_state_dict': g.state_dict(),
+                'optimizer_state_dict': g_optim.state_dict(),
+                'loss': loss_total,
+                'hparams': hparams,
+                }, os.path.join(PATH, f"checkpoints/g_epoch_{epoch}_ver_{version}.pt"))
+    torch.save({
+                'epoch': epoch,
+                'model_state_dict': d.state_dict(),
+                'optimizer_state_dict': d_optim.state_dict(),
+                'loss': loss_total,
+                'hparams': hparams,
+                }, os.path.join(PATH, f"checkpoints/d_epoch_{epoch}_ver_{version}.pt"))
+
+plot.plot_loss(g_losses, d_losses, f'Generator and Discriminator Training Loss Version {version}', f'train_loss_ver_{version}.png')
+plot.plot_generated(img_list, version)
 # Testing generator output
 #x = torch.rand(100)
 #g = Generator()
