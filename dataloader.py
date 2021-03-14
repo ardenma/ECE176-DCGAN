@@ -14,10 +14,7 @@ def get_dataloader(split, batch_size, shape, num_workers):
                                     transforms.CenterCrop(shape),
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    '''
-    transform = transforms.Compose([transforms.Resize(shape),
-                                    transforms.ToTensor()])
-    '''
+
     celeba_data = dset.CelebA('.', split=split, transform=transform, download=True)
     data_loader = torch.utils.data.DataLoader(celeba_data,
                                               batch_size=batch_size,

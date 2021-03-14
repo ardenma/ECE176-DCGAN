@@ -27,10 +27,6 @@ if not os.path.exists(os.path.join(PATH, "checkpoints")):
     os.makedirs(os.path.join(PATH, "checkpoints"))
     
 # Initialize Generator and Discriminator
-'''
-g = Generator(64).to(device=device)       # Set generator depth to 64
-d = Discriminator(64).to(device=device)   # Set discriminator depth to 64
-'''
 g = Generator().to(device=device)         # Default generator depth is 128
 d = Discriminator().to(device=device)     # Default discriminator depth is 128
 g.apply(weights_init)
@@ -46,23 +42,6 @@ fixed_noise = torch.randn(64, 100, 1, 1, device=device)
 real_label = 1.
 fake_label = 0.
 
-'''
-g_optim_options = {
-    "lr": 0.0002, 
-    "eps": 1e-08,
-    "weight_decay": 0, 
-    "amsgrad": False,
-    "betas": (0.5, 0.999)
-}
-
-d_optim_options = {
-    "lr": 0.0002,
-    "eps": 1e-08,
-    "weight_decay": 0, 
-    "amsgrad": False,
-    "betas": (0.5, 0.9999)
-}
-'''
 # Test with tutorial parameters
 g_optim_options = {
     "lr": 0.0002, 
@@ -122,23 +101,6 @@ for epoch in range(1, num_epochs+1):
         #========== Discriminator Training Loop ==========#
         logging.debug("Training discriminator.")
         for k in range(K):
-            '''
-            d_optim.zero_grad()
-
-            # x is batch size x 3 x 218 x 178 by default, 64 x 64 at the end after resize
-            # y is batch size x 40
-            x = batch[0].to(device)
-            batch_size = x.shape[0]
-            x_generated = g(torch.rand((batch_size, 100), device=device)) #Generating samples, shape changed from (128, 100)
-
-            # Computing loss for discriminator and optimizing wrt generator
-            loss_total = torch.log(d(x))
-            loss_g = torch.log(1 - d(x_generated))
-            loss_total = torch.sum(torch.cat((loss_total, loss_g))) / batch_size  
-            loss_total_neg = -loss_total  # negative sign for gradient ascent instead of descent
-            loss_total_neg.backward()
-            d_optim.step()
-            '''
             # Real batch
             d.zero_grad()
             x = batch[0].to(device)
@@ -168,16 +130,6 @@ for epoch in range(1, num_epochs+1):
         #========== Generator Training ==========#
         
         logging.debug("Training generator.")
-        '''
-        g_optim.zero_grad()
-        x_generated = g(torch.rand((batch_size, 100), device=device))  # Generating samples, shape changed from (128, 100)
-
-        # Computing loss for generator and optimizing wrt generator
-        loss_g = torch.log(d(x))
-        loss_g = torch.sum(torch.log(1 - d(x_generated))) / batch_size
-        loss_g.backward()
-        g_optim.step()
-        '''
         g.zero_grad()
         label.fill_(real_label)  # fake labels are real for generator cost
         # Since we just updated D, perform another forward pass of all-fake batch through D
@@ -227,10 +179,4 @@ for epoch in range(1, num_epochs+1):
 
 plot.plot_loss(g_losses, d_losses, f'Generator and Discriminator Training Loss Version {version}', f'train_loss_ver_{version}.png')
 plot.plot_generated(img_list, version)
-# Testing generator output
-#x = torch.rand(100)
-#g = Generator()
-#d = Discriminator()
-#y = g(x)
-#print(d(y).shape)
 
